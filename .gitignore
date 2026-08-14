@@ -1,33 +1,68 @@
-# Cloudflare Workers
-.dev.vars
-.wrangler/
-node_modules/
-
-# OS
+# ==============================================================================
+# OS / System Files
+# ==============================================================================
 .DS_Store
 Thumbs.db
+Desktop.ini
+.AppleDouble
+.LSOverride
 
-# Editor
-*.swp
-*.swo
-*~
+# ==============================================================================
+# IDEs / Editors / Tools
+# ==============================================================================
 .vscode/
 .idea/
 *.code-workspace
+*.swp
+*.swo
+*~
+.history/
+.eslintcache
+.prettiercache
 
-# Supabase CLI (if used)
+# ==============================================================================
+# Dependencies & Build Outputs
+# ==============================================================================
+node_modules/
+dist/
+build/
+.cache/
+.yarn/
+
+# ==============================================================================
+# Logs
+# ==============================================================================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ==============================================================================
+# Cloudflare Workers & Wrangler
+# ==============================================================================
+.dev.vars
+.wrangler/
+
+# ==============================================================================
+# Supabase CLI
+# ==============================================================================
 .supabase/
 
-# Secrets / credentials (never commit)
-# GAS script properties are stored in the GAS project, not in files.
-# If exported for backup, exclude them here.
+# ==============================================================================
+# Secrets / Credentials (NEVER COMMIT)
+# ==============================================================================
 *.secrets
-*.env
+.env
 .env.*
+!.env.example
 
-# .gitignore上で存在を示してもいいがGitHubにupしないもの
+# ==============================================================================
+# Local MEMOGAKI Folders (Not uploaded to GitHub)
+# .gitignore 上で存在を示してもいいが GitHub に up しないもの
 # memo-gaki-nado
+# 実際には .git/info/exclude に追加している
+# ==============================================================================
 private-inventory/
-
 
 
