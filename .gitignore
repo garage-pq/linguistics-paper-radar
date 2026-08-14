@@ -1,0 +1,33 @@
+# Cloudflare Workers
+.dev.vars
+.wrangler/
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.code-workspace
+
+# Supabase CLI (if used)
+.supabase/
+
+# Secrets / credentials (never commit)
+# GAS script properties are stored in the GAS project, not in files.
+# If exported for backup, exclude them here.
+*.secrets
+*.env
+.env.*
+
+# .gitignore上で存在を示してもいいがGitHubにupしないもの
+# memo-gaki-nado
+private-inventory/
+
+
+
