@@ -9,7 +9,7 @@
 //
 // 【スクリプトプロパティ（追加分）】
 //   GROQ_API_KEY          — (任意) Groq API Key。未設定なら要約スキップ
-//   GROQ_MODEL            — (任意) デフォルト: llama-3.3-70b-versatile
+//   GROQ_MODEL            — (任意) デフォルト: openai/gpt-oss-120b
 //   DISCORD_APPLICATION_ID — Discord Bot の Application ID
 //
 // ============================================================
@@ -20,7 +20,7 @@
 
 var DISCORD_APPLICATION_ID = PROPS.getProperty("DISCORD_APPLICATION_ID");
 var GROQ_API_KEY = PROPS.getProperty("GROQ_API_KEY");
-var GROQ_MODEL = PROPS.getProperty("GROQ_MODEL") || "llama-3.3-70b-versatile";
+var GROQ_MODEL = PROPS.getProperty("GROQ_MODEL") || "openai/gpt-oss-120b";
 
 // -----------------------------------------------------------
 // 1. コアロジック層（Discord に依存しない）

@@ -10,7 +10,7 @@
 //   SUPABASE_URL           — Supabase プロジェクト URL
 //   SUPABASE_KEY           — Supabase service_role キー
 //   GROQ_API_KEY           — Groq API キー
-//   GROQ_MODEL             — (任意) デフォルト: llama-3.3-70b-versatile
+//   GROQ_MODEL             — (任意) デフォルト: openai/gpt-oss-120b
 //   LLM_EVAL_LOOKBACK_DAYS — (任意) デフォルト: 14
 //   LLM_EVAL_MAX_PAPERS    — (任意) デフォルト: 5
 //   LLM_EVAL_SLEEP_MS      — (任意) 呼び出し間隔 ms。デフォルト: 2000
@@ -35,7 +35,7 @@ async function processLlmEvaluations(env) {
   const lookbackDays = parseInt(env.LLM_EVAL_LOOKBACK_DAYS || "14", 10);
   const maxPapers    = parseInt(env.LLM_EVAL_MAX_PAPERS    || "5",  10);
   const sleepMs      = parseInt(env.LLM_EVAL_SLEEP_MS      || "2000", 10);
-  const groqModel    = env.GROQ_MODEL || "llama-3.3-70b-versatile";
+  const groqModel    = env.GROQ_MODEL || "openai/gpt-oss-120b";
 
   // 1. 未評価ペアを取得
   const pairs = await getUnevaluatedPairs(env, lookbackDays, maxPapers);
@@ -136,37 +136,51 @@ Abstract: ${abstract}`;
 }
 
 async function evaluateRelevance(env, model, pair) {
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type":  "application/json",
-      Authorization:   `Bearer ${env.GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user",   content: buildUserPrompt(pair) },
-      ],
-      temperature: 0,
-      max_tokens: 200,
-      response_format: { type: "json_object" },
-    }),
-  });
+  const url = "https://api.groq.com/openai/v1/chat/completions";
+  const maxRetries = 2;
 
-  if (!res.ok) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${env.GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: buildUserPrompt(pair) },
+        ],
+        temperature: 0,
+        max_tokens: 200,
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const raw = data.choices?.[0]?.message?.content;
+
+      if (!raw) {
+        throw new Error("Groq returned empty content");
+      }
+
+      return parseEvaluation(raw);
+    }
+
     const body = await res.text();
+
+    // 429 の場合だけ、3秒待って再試行
+    if (res.status === 429 && attempt < maxRetries) {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      continue;
+    }
+
     throw new Error(`Groq API error: ${res.status} ${body}`);
   }
-
-  const data = await res.json();
-  const raw  = data.choices?.[0]?.message?.content;
-  if (!raw) {
-    throw new Error("Groq returned empty content");
-  }
-
-  return parseEvaluation(raw);
 }
+
 
 /**
  * Groq レスポンスの JSON をパース・バリデーション

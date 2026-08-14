@@ -92,7 +92,7 @@ GAS エディタの「プロジェクトの設定」→「スクリプト プロ
 | `SUPABASE_URL` | Supabase Dashboard → Settings → API | |
 | `SUPABASE_KEY` | Supabase Dashboard → Settings → API | Secret key（service_role） |
 | `GROQ_API_KEY` | Groq Console | 未設定の場合，要約はスキップされアブストラクト先頭を返す |
-| `GROQ_MODEL` | — | 任意．デフォルト `llama-3.3-70b-versatile` |
+| `GROQ_MODEL` | — | 任意．デフォルト `openai/gpt-oss-120b` |
 | `DISCORD_APPLICATION_ID` | Discord Developer Portal → Application → General Information | Bot 系でのみ使用 |
 | `OPENALEX_APIKEY` | OpenAlex | |
 | `CINII_APPID` | CiNii Research アプリケーション登録 | |

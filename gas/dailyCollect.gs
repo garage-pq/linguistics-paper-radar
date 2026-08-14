@@ -38,6 +38,7 @@ var KEYWORD_SCOPE_QUERIES = [
   '"digital communication"',
   '"hashtag" OR "hashtags"',
   '"cognitive linguistics"',
+  '"metaphor"',
   '"pictogram" OR "pictograph" OR "linguistic landscape"'
 ];
 
@@ -52,6 +53,8 @@ var CINII_QUERIES = [
   // 言語景観
   '(言語景観 OR linguistic landscape)',
 
+  // メタファー系
+  '(メタファー OR 比喩 OR 隠喩 OR 直喩 OR metaphor)',
 
   // CMC（コンピュータ媒介コミュニケーション）
   '(CMC OR computer-mediated)',
@@ -311,6 +314,11 @@ function getAuthors(entry, ns, lang) {
 
 function collectJstage() {
   var results = [];
+  /** 注意点：標準でJ-STAGEのAPIは抄録（アブスト）を返さない。個別の書誌情報ページを開けば拾えるが今はスキップ。
+  また、 publication_date は pubyear では年までしか拾えず、日付をつけると1/1になってしまう。このため
+  updated： `<updated>2007-12-10T09:00+09:00</updated>` のようにかわりにupdatedを拾うように変更した。
+  DBの列名は publication_date のままなので、実態との差に注意。
+   */ 
   var currentYear = new Date().getFullYear();
   // 12/31の更新とかも拾えるように
   var fromYear = (new Date().getMonth() === 0) ? currentYear - 1 : currentYear;
@@ -378,7 +386,7 @@ function collectJstage() {
         abstract:         null,
         authors:          getAuthors(entry, ns, "ja") || getAuthors(entry, ns, "en"),
         journal_name:     getXmlNestedText(entry, "material_title", ns, "ja"),
-        publication_date: getXmlChildText(entry, "pubyear", ns),
+        publication_date: updatedText || getXmlChildText(entry, "pubyear", ns),
         source_url:       sourceUrl,
         language:         titleJa ? "ja" : "en"
       });
