@@ -26,7 +26,7 @@
   - **編集のしやすさ**：ブラウザ上で収集キーワードの微調整，通知メッセージの文面編集，実行ログの確認が完結する．「このキーワードも拾いたい」「通知メッセージのフォーマットを変えたい」といった調整を容易に行える．ファイルを分離して1プロジェクトにまとめるのも容易であり，メンバーは「収集系」「通知系」の関数にすぐアクセスできる．
     - **【補足】** ただし現状の設計では，Discord の チャンネル・キーワード別通知は DB (Supabase) の特定のテーブルで Webhook の値を設定するやり方になっている．
   - **定期実行のしやすさ**：日次収集（`dailyCollect`）や週次通知（`weeklyNotify`）のような定期実行処理を，標準のトリガー機能のみで運用できる．
-- **Groq 選定理由** — カード登録不要（Gemini の課金トラップ回避）．Gemini の詳細は Appendix に退避
+- **Groq 選定理由** — カード登録不要（Gemini の課金トラップ回避）．
 
 
 ## 3. 構成・設計判断
@@ -57,21 +57,21 @@
 
 ## 4. トラブルシューティング記録
 
-- **Discord の Interactions Endpoint URL vs Webhooks Endpoint URL** — 前者でないと PING 検証が行われず，適当な URL でも保存できてしまう
+- **Discord の Interactions Endpoint URL と Webhooks Endpoint URL** — インタラクティブな bot の構築では Interactions Endpoint URL を使う．うっかり後者を指定した（後者では PING 検証が行われず，適当な URL でも保存できてしまう可能性？）
 - **GAS の「新しいデプロイ」vs「デプロイを管理」** — 前者だと URL が毎回変わり Workers の環境変数を更新し続ける羽目になる．後者で既存デプロイを編集すれば URL 固定
 - **`getWeeklyHits` の引数形式** — オブジェクト `{ topic, mode }` ではなく2引数 `(topicKeyword, mode)`．間違えると `results.forEach is not a function` エラー
 - **`getWeeklyHits(null, "added")` は「全トピック一括」ではなく「トピック未登録」エラー** — トピックごとにループで呼ぶ必要がある
 - **Zenodo 論文の混入** — OpenAlex keyword 検索で Zenodo 由来のデータセット・ソフトウェアが大量に混入（141件）．DB からは `doi LIKE '10.5281/zenodo.%'` で削除済み．再発防止は OpenAlex のクエリに `type:article` フィルタを追加することで対応済み
-- **Dashboard での Worker 作成時の「build process」エラー** — Upload ではなくインラインエディタを使えば回避できる
+- **CloudFlare の Dashboard での Worker 作成時の「build process」エラー** — Upload ではなくインラインエディタを使えば回避できる
 - **Error 1031 (Invalid Workers Preview configuration)** — `compatibility_date` と `nodejs_compat` の設定が必要（Ed25519 に必要）
 - **Discord 2000文字制限** — 全トピックまとめて送ると超過する．トピックあたりの文字数を按分するか分割送信で対応
 - **OpenAlex API の `|` エンコーディング** — GAS の OpenAlex 関連の処理（`fetchOpenAlexPages`）では， URL 中の `|`（パイプ）がそのままでは正しく処理されない場合がある．OpenAlexに関しては，`%7C` にエンコードして渡す．ブラウザでは `|` のまま動作するため気づきにくい可能性あり．
-- **LingBuzz の An invalid XML character エラー ** — サニタイズ処理を追加（単純置換での副作用は未検証）．
+- **LingBuzz の An invalid XML character エラー** — サニタイズ処理を追加（単純置換での副作用は未検証）．
 - **PGroongaでの使用容量肥大**- 全文検索に関して PGroonga の利用を考えて拡張をonにしたが，数日の試行で Supabase が500MB制限の60%に到達．ここで PGroonga を DROP した．ただし肥大した容量は残る模様？　（全文検索は ILIKE で行い，トピックとのマッチングは Groq を通して行う方針．）
   - **PGroonga を DROP した理由の詳細** — 日本語全文検索を検討した．手段として `pg_bigm`（2-gram インデックス）を探したが，Supabase の利用可能な拡張一覧に見当たらず，代替として PGroonga を採用した経緯がある．これは高速な検索を行える拡張機能である．しかし運用の結果，以下の 点から DROP した．(1) 【容量の問題】Groonga の独自ストレージが初期オーバーヘッドだけで約 280 MB を消費していると推定された（Supabase フリープラン 500 MB のうち 300 MB 近くが使用されていたが，実テーブル・インデックスの合計は約 6 MB に過ぎなかった）．`pg_bigm` が Supabase で利用可能になった場合は再検討の余地あり．(2) 【現状の構成】現時点で `searchWorks` も `matchWorksToTopics` も実際には PGroonga を使わず `ILIKE` と `indexOf` で完結している．(3) 【検索方法のメリットがどれだけあるか】(P)Groonga では形態素解析に基づく検索が行えるが，言語学の専門用語に対してはその効果が高くないかもしれない（特にチューニングなしでは，不適当な分割となる可能性もある）．また，検索は名詞（トピック名等）が中心だと予想され，動詞・形容詞等の活用を吸収するメリットがあまりないのではないか．また，このプロジェクトの特徴からすると，意味的なマッチングのほうが重要かもしれない．トピックの表記バリエーションへの対応や，（明示されない）「分野」等に該当するかを判定することを考慮し，LLM判定が考えられる．（本プロジェクトでは通知と別のタイミングで関連度データが構築できることから）LLMでの意味的な関連度判定を行うほうが効果があるのではないか． (4) 【高速性が重要かどうか】このプロジェクトの主要件は週次通知であり，インタラクティブな bot の `searchWorks` は副次的機能である．将来レコード数の増加で `ILIKE` がタイムアウトするようになった場合，bot 側の検索を切り捨てる選択肢がある．`works_topics` の紐づけは `matchWorksToTopics` で新規追加分のみ処理する構成のため，全件スキャンの負荷は通知側には波及しない．
   - **構成についての補足**：意味的な揺れの吸収は LLM 評価層が担っており，形態素解析レベルの改善は不要．英語側の `fts_en`（tsvector, 約 2 MB）は将来 `ILIKE` → `@@` に切り替える余地を残すため保持．
   - **容量についての補足**：なお，`DROP EXTENSION pgroonga` を実行しても，Groonga の外部ファイルは PostgreSQL の管理外にあるため，ディスクから解放されないらしい（ https://note.com/miseriku/n/ndc34310e58e7 ）．Supabase では superuser 権限がなく `pgroonga_vacuum()` も空振りするらしい．残容量に余裕がある間は放置し，逼迫した時点で DB 再作成（新プロジェクト作成 → スキーマ＋データ移行 → 接続先切り替え）で対処する．
-- **CloudFlare無料版の制限の対策** — LLM の eval (llm_eval) で対象 topic 数と対象 paper 数を増やすと `Too many subrequests by single Worker invocation. ` のエラーが観測された．今は環境変数 `LLM_EVAL_MAX_PAPERS` の調整（と cron の頻度←目的：未評価 works が積み増されないため）でエラーを抑制する方針にしているが，評価対象のtopicsを増やしていくなら根本的に処理を工夫することを検討（分散実行、Groqリクエストをまとめる）．
+- **CloudFlare 無料版の制限の対策** — LLM の eval (llm_eval) で対象 topic 数と対象 paper 数を増やすと `Too many subrequests by single Worker invocation. ` のエラーが観測された．今は環境変数 `LLM_EVAL_MAX_PAPERS` の調整（と cron の頻度←目的：未評価 works が積み増されないため）でエラーを抑制する方針にしているが，評価対象のtopicsを増やしていくなら根本的に処理を工夫することを検討（分散実行、Groqリクエストをまとめる）．
 
 
 ## 5. 運用上の知見
